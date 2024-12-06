@@ -1,0 +1,27 @@
+---
+- name: Manage files and directories on Ubuntu servers
+  hosts: ubuntu
+  become: yes  # Equivalent to '-b' (run as root)
+  tasks:
+    - name: Ensure /home/evening/public_html directory exists with correct permissions
+      file:
+        path: /home/toast_evening/public_html
+        mode: '0755'
+        owner: root
+        group: root
+        state: directory
+
+    - name: Copy index.html to /home/evening/public_html with specific content and permissions
+      copy:
+        dest: /home/evening/public_html/index.html
+        content: '<html><body><h1>evening test page</h1></body></html>'
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Set permissions recursively on /home/breakfast
+      file:
+        path: /home/toast_breakfast
+        mode: '0755'
+        recurse: yes
+

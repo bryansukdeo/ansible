@@ -1,0 +1,65 @@
+---
+- name: Deploy and configure vsftpd FTP server on Ubuntu
+  hosts: Ubuntu  # Define the target hosts group (make sure it's in your inventory)
+  become: yes     # Run as root (superuser)
+  
+  tasks:
+    # Step 1: Install vsftpd package
+    - name: Install vsftpd package
+      apt:
+        name: vsftpd
+        state: present
+        update_cache: yes
+
+    # Step 2: Ensure vsftpd configuration allows anonymous access and user uploads
+    - name: Ensure vsftpd.conf allows anonymous FTP access
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?anonymous_enable'
+        line: 'anonymous_enable=YES'
+        state: present
+        backup: yes
+
+    - name: Ensure vsftpd.conf allows user uploads
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?write_enable'
+        line: 'write_enable=YES'
+        state: present
+        backup: yes
+
+    - name: Ensure the local umask is set to allow user uploads (optional)
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?local_umask'
+        line: 'local_umask=022'
+        state: present
+        backup: yes
+
+    # Step 3: Restart vsftpd service to apply changes
+    - name: Restart vsftpd service
+      service:
+        name: vsftpd
+        state: restarted
+
+    # Step 4: Ensure /srv/ftp directory exists
+    - name: Ensure /srv/ftp directory exists
+      file:
+        path: /srv/ftp
+        state: directory
+        mode: '0755'
+
+    # Step 5: Deploy README.txt to /srv/ftp
+    - name: Deploy /srv/ftp/README.txt with read-only permissions
+      copy:
+        dest: /srv/ftp/README.txt
+        content: |
+          Welcome to the FTP server.
+          This is a read-only file.
+
+    # Step 6: Set read-only permissions on README.txt for all users
+    - name: Set read-only permissions on /srv/ftp/README.txt
+      file:
+        path: /srv/ftp/README.txt
+        mode: '0444'
+

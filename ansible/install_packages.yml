@@ -1,0 +1,94 @@
+---
+- name: Install packages on multiple systems
+  hosts: Ubuntu
+  become: true
+  tasks:
+
+    # Step 1: Define a list of packages to be installed
+    - name: Define the list of packages
+      set_fact:
+        packages:
+          - vim
+          - curl
+          - git
+          - htop
+
+    # Step 2: Loop through each package and install it
+    - name: Install packages in the list
+      package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages }}"
+      register: result
+      notify:
+        - Reboot if necessary
+
+    # Step 3: Conditionally perform a task using `when` and a Jinja expression
+    - name: Print a message when git is installed
+      debug:
+        msg: "Git is installed!"
+      when: "'git' in result.results | selectattr('name', 'equalto', item) | map(attribute='state') | first"
+
+    # Step 4: Handle errors and ensure the playbook continues with `ignore_errors`
+    - name: Attempt a task that may fail
+      command: /bin/false
+      ignore_errors: true
+      register: command_result
+
+    # Step 5: Using `creates` to avoid redundant tasks
+    - name: Download file only if it does not exist
+      get_url:
+        url: "https://example.com/somefile.tar.gz"
+        dest: "/tmp/somefile.tar.gz"
+      creates: "/tmp/somefile.tar.gz"
+
+    # Step 6: Apply different configuration based on the OS family
+    - block:
+        - name: Configure for Debian-based systems
+          apt:
+            name: "{{ item }}"
+            state: present
+          loop: "{{ packages }}"
+        - name: Install Apache on Debian-based systems
+          apt:
+            name: apache2
+            state: present
+      when: ansible_facts.os_family == "Debian"
+      rescue:
+        - name: Handle failure for Debian systems
+          debug:
+            msg: "Something went wrong while configuring Debian-based systems"
+      always:
+        - name: Always run this task (for Debian)
+          debug:
+            msg: "This task always runs, regardless of success or failure."
+
+    - block:
+        - name: Configure for RedHat-based systems
+          yum:
+            name: "{{ item }}"
+            state: present
+          loop: "{{ packages }}"
+        - name: Install Apache on RedHat-based systems
+          yum:
+            name: httpd
+            state: present
+      when: ansible_facts.os_family == "RedHat"
+      rescue:
+        - name: Handle failure for RedHat systems
+          debug:
+            msg: "Something went wrong while configuring RedHat-based systems"
+      always:
+        - name: Always run this task (for RedHat)
+          debug:
+            msg: "This task always runs, regardless of success or failure."
+
+    # Step 7: Clean up and notify about potential reboot
+    - name: Reboot if necessary
+      reboot:
+        msg: "Rebooting the system due to package installation"
+        reboot_timeout: 600
+      when: result.changed
+      register: reboot_result
+      ignore_errors: true
+

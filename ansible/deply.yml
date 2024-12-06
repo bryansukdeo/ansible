@@ -1,0 +1,81 @@
+---
+- name: Deploy and configure vsftpd FTP server on Ubuntu
+  hosts: Ubuntu
+  become: true
+#  become_password: "Secret555"
+  tasks:
+
+    # Install vsftpd
+    - name: Install vsftpd package
+      apt:
+        name: vsftpd
+        state: present
+        update_cache: yes
+
+    # Ensure the vsftpd service is started and enabled
+    - name: Ensure vsftpd service is started and enabled
+      service:
+        name: vsftpd
+        state: started
+        enabled: true
+
+    # Configure /etc/vsftpd.conf for user uploads and anonymous access
+    - name: Update vsftpd configuration for anonymous FTP access
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?anonymous_enable'
+        line: 'anonymous_enable=YES'
+        state: present
+
+    - name: Allow uploads for anonymous users
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?anon_upload_enable'
+        line: 'anon_upload_enable=YES'
+        state: present
+
+    - name: Allow anonymous users to create directories
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?anon_mkdir_write_enable'
+        line: 'anon_mkdir_write_enable=YES'
+        state: present
+
+    - name: Ensure write access for users and anonymous is enabled
+      lineinfile:
+        path: /etc/vsftpd.conf
+        regexp: '^#?write_enable'
+        line: 'write_enable=YES'
+        state: present
+
+    # Restart vsftpd service to apply changes
+    - name: Restart vsftpd to apply configuration changes
+      service:
+        name: vsftpd
+        state: restarted
+
+    # Ensure /srv/ftp/ exists
+    - name: Ensure /srv/ftp directory exists
+      file:
+        path: /srv/ftp
+        state: directory
+        mode: '0755'
+
+    # Create the README.txt file with read-only permissions
+    - name: Create /srv/ftp/README.txt with read-only permissions
+      copy:
+        content: |
+          Welcome to the FTP server. This directory contains important files that are publicly available.
+        dest: /srv/ftp/README.txt
+        owner: root
+        group: root
+        mode: '0444'
+
+    # Ensure ownership and permission are correct on /srv/ftp/README.txt
+    - name: Set permissions for README.txt to be read-only
+      file:
+        path: /srv/ftp/README.txt
+        owner: root
+        group: root
+        mode: '0444'
+

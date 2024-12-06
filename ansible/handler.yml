@@ -1,0 +1,5 @@
+- name: Ensure /srv/ftp directory exists
+      file:
+        path: /srv/ftp
+        state: directory
+        mode: '0755'

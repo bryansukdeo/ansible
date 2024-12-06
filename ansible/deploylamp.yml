@@ -1,0 +1,68 @@
+---
+- name: Deploy LAMP on Ubuntu hosts
+  hosts: Ubuntu
+  become: yes
+  become_method: sudo
+  
+  pre_tasks:
+  - name: Update apt repository cache, if necessary
+    apt: update_cache=yes cache_valid_time=3600
+
+  handlers:
+  - name: restart apache
+    service: name=apache2 state=restarted
+  
+  tasks:
+  - name: Install LAMP packages
+    apt:
+      state: present
+      name:
+      - apache2
+      - mariadb-server
+      - mariadb-client
+      - php
+
+  - name: Disable the firewall
+    service: name=ufw state=stopped
+
+  - name: Start Apache and MariaDB
+    service: "name={{ item }} state=started enabled=yes"
+    with_items:
+    - apache2
+    - mariadb
+
+  - name: Enable Apache userdir module for home directory hosting
+    apache2_module: name=userdir state=present
+    notify: restart apache
+
+  - name: Create toast user
+      user:
+        name: toast
+        state: present
+
+    # Task to change permissions on /home/toast
+  - name: Change permissions on /home/toast
+      file:
+        path: /home/toast
+        mode: '0755'
+        recurse: yes
+
+    # Task to create the public_html subdirectory
+  - name: Create public_html directory under /home/toast
+      file:
+        path: /home/toast/public_html
+        state: directory
+        mode: '0755'
+
+    # Task to upload a sample index.html to public_html
+  - name: Upload sample index.html to public_html
+      copy:
+        dest: /home/toast/public_html/index.html
+        content: |
+          <html>
+            <head><title>Welcome to Toast!</title></head>
+            <body>
+              <h1>Toast's website is up and running!</h1>
+            </body>
+          </html>
+        mode: '0644'

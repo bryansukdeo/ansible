@@ -1,0 +1,19 @@
+---
+- name: Create a user with prompted username and group
+  hosts: Ubuntu
+  become: yes  # Equivalent to '-b' (run as root)
+  vars_prompt:
+    - name: "username"
+      prompt: "Enter the username"
+      private: no  # Don't mask the input
+#    - name: "group"
+#      prompt: "Enter the group"
+#      private: no  # Don't mask the input
+
+  tasks:
+    - name: Ensure user is present
+      user:
+        name: "{{ username }}"
+#        group: "{{ group }}"
+        state: present
+
